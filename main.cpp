@@ -9,85 +9,93 @@
 using namespace std;
 
 template<class T>
-using StorageType = typename decay<typename remove_reference<T>::type>::type;
+using Type = typename decay<typename remove_reference<T>::type>::type;
 
 struct Variant
 {
-    bool is_null() const { return !ptr; }
-    bool not_null() const { return ptr; }
+    bool isNull() const { return !p; }
+    bool notNull() const { return p; }
 
-    template<typename U> Variant(U&& value)
-        : ptr(new Derived<StorageType<U>>(forward<U>(value)))
+
+
+    template<class V> bool is() const
     {
+        typedef Type<V> T;
 
-    }
-
-    template<class U> bool is() const
-    {
-        typedef StorageType<U> T;
-
-        auto derived = dynamic_cast<Derived<T>*> (ptr);
+        auto derived = dynamic_cast<Derived<T>*> (p);
 
         return derived;
     }
 
-    template<class U>
-    StorageType<U>& as()
+    template<class V>
+    Type<V>& as()
     {
-        typedef StorageType<U> T;
+        typedef Type<V> T;
 
-        auto derived = dynamic_cast<Derived<T>*> (ptr);
+        auto derived = dynamic_cast<Derived<T>*> (p);
 
         if (!derived)
             throw bad_cast();
 
-        return derived->value;
+        return derived->val;
     }
 
-    template<class U>
-    operator U()
+    template<typename V> Variant(V&& val)
+            : p(new Derived<Type<V>>(forward<V>(val)))
     {
-        return as<StorageType<U>>();
+
     }
 
     Variant()
-        : ptr(nullptr)
+        : p(nullptr)
     {
 
     }
 
-    Variant(Variant& that)
-        : ptr(that.clone())
+    Variant(Variant& invar)
+        : p(invar.clone())
     {
 
     }
 
-    Variant(Variant&& that)
-        : ptr(that.ptr)
+    Variant(Variant&& invar)
+        : p(invar.p)
     {
-        that.ptr = nullptr;
+        invar.p = nullptr;
     }
 
-    Variant(const Variant& that)
-        : ptr(that.clone())
-    {
-
-    }
-
-    Variant(const Variant&& that)
-        : ptr(that.clone())
+    Variant(const Variant& invar)
+        : p(invar.clone())
     {
 
     }
 
-    Variant& operator=(const Variant& a)
+    Variant(const Variant&& invar)
+        : p(invar.clone())
     {
-        if (ptr == a.ptr)
+
+    }
+
+    ~Variant()
+    {
+        if (p)
+            delete p;
+    }
+
+    template<class V>
+    operator V()
+    {
+        return as<Type<V>>();
+    }
+
+    Variant& operator=(const Variant& variant)
+    {
+        if (p == variant.p)
             return *this;
 
-        auto old_ptr = ptr;
+        auto old_ptr = p;
 
-        ptr = a.clone();
+        p = variant.clone();
 
         if (old_ptr)
             delete old_ptr;
@@ -95,21 +103,17 @@ struct Variant
         return *this;
     }
 
-    Variant& operator=(Variant&& a)
+    Variant& operator=(Variant&& variant)
     {
-        if (ptr == a.ptr)
+        if (p == variant.p)
             return *this;
 
-        swap(ptr, a.ptr);
+        swap(p, variant.p);
 
         return *this;
     }
 
-    ~Variant()
-    {
-        if (ptr)
-            delete ptr;
-    }
+
 
 private:
     struct Base
@@ -122,41 +126,38 @@ private:
     template<typename T>
     struct Derived : Base
     {
-        template<typename U> Derived(U&& value) : value(forward<U>(value)) { }
+        template<typename V> Derived(V&& val) : val(forward<V>(val)) { }
 
-        T value;
+        T val;
 
-        Base* clone() const { return new Derived<T>(value); }
+        Base* clone() const { return new Derived<T>(val); }
     };
 
     Base* clone() const
     {
-        if (ptr)
-            return ptr->clone();
+        if (p)
+            return p->clone();
         else
             return nullptr;
     }
 
-    Base* ptr;
+    Base* p;
 };
 
 int main()
 {
-    Variant n;
-    n = 3;
-    int test = n;
+    Variant variant;
+    variant = 3;
+    int test = variant;
     std::cout << test << std::endl;
 
-    n = 2.5f;
-    float test2 = n;
+    variant = 2.5f;
+    float test2 = variant;
     std::cout << test2 << std::endl;
 
     string s4 = "test";
-    n = s4;
-    string test3 = n;
-    //assert(n.not_null());
-    //assert(n.is<string>());
-    //assert(!n.is<int>());
+    variant = s4;
+    string test3 = variant;
     std::cout << test3 << std::endl;
 
 
@@ -168,11 +169,11 @@ int main()
 
     std::cout << my.as<vector<int>>()[0] << std::endl;
 
-    n = my;
+    variant = my;
 
-    n.as<vector<int>>()[1] = 2;
+    variant.as<vector<int>>()[1] = 2;
 
-    std::cout << n.as<vector<int>>()[1] << std::endl;
+    std::cout << variant.as<vector<int>>()[1] << std::endl;
     std::cout << my.as<vector<int>>()[1] << std::endl;
 
 }
