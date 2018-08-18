@@ -11,12 +11,12 @@ using namespace std;
 template<class T>
 using StorageType = typename decay<typename remove_reference<T>::type>::type;
 
-struct Any
+struct Variant
 {
     bool is_null() const { return !ptr; }
     bool not_null() const { return ptr; }
 
-    template<typename U> Any(U&& value)
+    template<typename U> Variant(U&& value)
         : ptr(new Derived<StorageType<U>>(forward<U>(value)))
     {
 
@@ -50,37 +50,37 @@ struct Any
         return as<StorageType<U>>();
     }
 
-    Any()
+    Variant()
         : ptr(nullptr)
     {
 
     }
 
-    Any(Any& that)
+    Variant(Variant& that)
         : ptr(that.clone())
     {
 
     }
 
-    Any(Any&& that)
+    Variant(Variant&& that)
         : ptr(that.ptr)
     {
         that.ptr = nullptr;
     }
 
-    Any(const Any& that)
+    Variant(const Variant& that)
         : ptr(that.clone())
     {
 
     }
 
-    Any(const Any&& that)
+    Variant(const Variant&& that)
         : ptr(that.clone())
     {
 
     }
 
-    Any& operator=(const Any& a)
+    Variant& operator=(const Variant& a)
     {
         if (ptr == a.ptr)
             return *this;
@@ -95,7 +95,7 @@ struct Any
         return *this;
     }
 
-    Any& operator=(Any&& a)
+    Variant& operator=(Variant&& a)
     {
         if (ptr == a.ptr)
             return *this;
@@ -105,7 +105,7 @@ struct Any
         return *this;
     }
 
-    ~Any()
+    ~Variant()
     {
         if (ptr)
             delete ptr;
@@ -142,34 +142,14 @@ private:
 
 int main()
 {
-    Any n;
-    assert(n.is_null());
+    Variant n;
+    n = 3;
+    int test = n;
+    std::cout << test << std::endl;
 
-    string s1 = "foo";
-
-    Any a1 = s1;
-
-    assert(a1.not_null());
-    assert(a1.is<string>());
-    assert(!a1.is<int>());
-
-    Any a2(a1);
-
-    assert(a2.not_null());
-    assert(a2.is<string>());
-    assert(!a2.is<int>());
-
-    string s2 = a2;
-
-    assert(s1 == s2);
-
-    //n = 3;
-    //int test = n;
-    //std::cout << test << std::endl;
-
-    //n = 2.5f;
-    //float test2 = n;
-    //std::cout << test2 << std::endl;
+    n = 2.5f;
+    float test2 = n;
+    std::cout << test2 << std::endl;
 
     string s4 = "test";
     n = s4;
@@ -180,13 +160,19 @@ int main()
     std::cout << test3 << std::endl;
 
 
-    Any my;
-    vector<int> vec3(3,1);
+    Variant my;
+    vector<int> vec3(3,5);
     my = vec3;
 
     std::cout << my.is<vector<int>>() << std::endl;
 
     std::cout << my.as<vector<int>>()[0] << std::endl;
 
+    n = my;
+
+    n.as<vector<int>>()[1] = 2;
+
+    std::cout << n.as<vector<int>>()[1] << std::endl;
+    std::cout << my.as<vector<int>>()[1] << std::endl;
 
 }
